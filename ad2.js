@@ -17,65 +17,32 @@
         var style = document.createElement('style');
         style.id = styleId;
         style.innerHTML = `
-            .adw-container-${bannerId} {
-                position: relative;
+            /* 3D 효과를 주기 위한 부모 공간 설정 */
+            .adw-tilt-wrap-${bannerId} {
                 width: ${width}px;
                 height: ${height}px;
-                overflow: hidden;
                 margin: 0 auto;
+                perspective: 1000px; /* 입체감 깊이 */
             }
-            .adw-link-${bannerId} {
+            .adw-tilt-container-${bannerId} {
+                position: relative;
+                width: 100%;
+                height: 100%;
+                transition: transform 0.15s ease-out;
+                transform-style: preserve-3d;
+                box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+            }
+            .adw-tilt-link-${bannerId} {
                 display: block;
                 width: 100%;
                 height: 100%;
-                position: relative;
-                text-decoration: none;
             }
-            .adw-img-${bannerId} {
+            .adw-tilt-img-${bannerId} {
                 width: 100%;
                 height: 100%;
                 object-fit: fill;
                 border: 0;
-            }
-            /* 1. 고급스러운 대각선 광택 효과 */
-            .adw-container-${bannerId}::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: -150%;
-                width: 50%;
-                height: 100%;
-                background: linear-gradient(to right, rgba(255,255,255,0) 0%, rgba(255,255,255,0.6) 50%, rgba(255,255,255,0) 100%);
-                transform: skewX(-25deg);
-                animation: adwShine-${bannerId} 3.5s infinite ease-in-out;
-            }
-            /* 2. 가상 가독성 CTA 버튼 오버레이 */
-            .adw-btn-${bannerId} {
-                position: absolute;
-                right: 15px;
-                bottom: calc(50% - 15px); /* 세로 중앙 정렬 */
-                transform: translateY(50%);
-                background-color: #ff3b30; /* 정열의 레드 (원하는 색상 변경 가능) */
-                color: #ffffff;
-                padding: 6px 14px;
-                font-size: 12px;
-                font-weight: bold;
-                border-radius: 20px;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-                animation: adwPulse-${bannerId} 1.5s infinite ease-in-out;
-                font-family: sans-serif;
-                pointer-events: none; /* 클릭은 배너 전체가 먹히도록 설정 */
-            }
-            /* 애니메이션 정의 */
-            @keyframes adwShine-${bannerId} {
-                0% { left: -150%; }
-                15% { left: 150%; }
-                100% { left: 150%; }
-            }
-            @keyframes adwPulse-${bannerId} {
-                0% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
-                50% { transform: scale(1.08); box-shadow: 0 6px 12px rgba(255,59,48,0.5); }
-                100% { transform: scale(1); box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+                display: block;
             }
         `;
         document.head.appendChild(style);
@@ -84,12 +51,37 @@
     var targetZone = document.getElementById('adwiser_zone_' + bannerId);
     if (targetZone) {
         targetZone.innerHTML = `
-            <div class="adw-container-${bannerId}">
-                <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="adw-link-${bannerId}">
-                    <img src="${imgUrl}" class="adw-img-${bannerId}" alt="광고">
-                    <div class="adw-btn-${bannerId}">자세히 보기 ➔</div>
-                </a>
+            <div class="adw-tilt-wrap-${bannerId}">
+                <div class="adw-tilt-container-${bannerId}">
+                    <a href="${linkUrl}" target="_blank" rel="noopener noreferrer" class="adw-tilt-link-${bannerId}">
+                        <img src="${imgUrl}" class="adw-tilt-img-${bannerId}" alt="광고">
+                    </a>
+                </div>
             </div>
         `;
+
+        // 마우스 움직임 감지 실시간 입체 제어
+        var card = targetZone.querySelector('.adw-tilt-container-' + bannerId);
+        if (card) {
+            card.addEventListener('mousemove', function(e) {
+                var rect = card.getBoundingClientRect();
+                var x = e.clientX - rect.left; // 가로축 마우스 위치
+                var y = e.clientY - rect.top;  // 세로축 마우스 위치
+                
+                var xc = rect.width / 2;
+                var yc = rect.height / 2;
+                
+                // 기울기 각도 계산 (너무 휙휙 돌지 않게 숫자로 나눕니다)
+                var angleX = (yc - y) / (yc / 6); 
+                var angleY = (x - xc) / (xc / 8);
+                
+                card.style.transform = 'rotateX(' + angleX + 'deg) rotateY(' + angleY + 'deg) scale(1.02)';
+            });
+
+            // 마우스가 나가면 부드럽게 원상복구
+            card.addEventListener('mouseleave', function() {
+                card.style.transform = 'rotateX(0deg) rotateY(0deg) scale(1)';
+            });
+        }
     }
 })();

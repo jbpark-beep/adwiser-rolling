@@ -1,23 +1,20 @@
 (function() {
-    var currentScript = document.currentScript || (function() {
-        var scripts = document.getElementsByTagName('script');
-        return scripts[scripts.length - 1];
-    })();
+    // 임대 시스템의 코드 변형을 방지하기 위해 글로벌 바구니(Cache) 데이터를 읽습니다.
+    window.adwCache = window.adwCache || [];
+    if (window.adwCache.length === 0) return;
 
-    // 1. 최대 3개까지의 이미지 주소와 링크를 받아옵니다.
-    var img1 = currentScript.getAttribute('data-img1');
-    var img2 = currentScript.getAttribute('data-img2');
-    var img3 = currentScript.getAttribute('data-img3');
-    var linkUrl = currentScript.getAttribute('data-link');
-    var width = currentScript.getAttribute('data-width') || '970';
-    var height = currentScript.getAttribute('data-height') || '96';
-    var bannerId = currentScript.getAttribute('data-id') || Math.random().toString(36).substr(2, 9);
+    // 바구니에서 가장 먼저 대기 중인 광고 데이터를 꺼냅니다.
+    var config = window.adwCache.shift();
 
-    // 유효한 이미지들만 배열에 담습니다.
-    var images = [img1, img2, img3].filter(Boolean);
+    var images = config.images.filter(Boolean);
+    var linkUrl = config.link;
+    var width = config.width || '970';
+    var height = config.height || '96';
+    var bannerId = config.id || Math.random().toString(36).substr(2, 9);
+
     if (images.length === 0) return;
 
-    // 2. 슬라이더 스타일(CSS) 자동 생성
+    // 슬라이더 스타일(CSS) 자동 생성
     var styleId = 'adwiser-multi-style-' + bannerId;
     if (!document.getElementById(styleId)) {
         var style = document.createElement('style');
@@ -30,12 +27,11 @@
                 overflow: hidden;
                 margin: 0 auto;
             }
-            /* 이미지들을 가로로 길게 이어 붙이는 기차 트랙 */
             .adw-m-track-${bannerId} {
                 display: flex;
                 width: ${images.length * 100}%;
                 height: 100%;
-                transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1); /* 부드러운 감속 슬라이드 */
+                transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
             }
             .adw-m-slide-${bannerId} {
                 width: ${100 / images.length}%;
@@ -56,14 +52,9 @@
         document.head.appendChild(style);
     }
 
-    // 3. 화면에 롤링 지면 그리기
+    // 광고가 그려질 고유 구역 타겟팅
     var targetZone = document.getElementById('adwiser_zone_multi_' + bannerId);
-    if (!targetZone) {
-        // 만약 타겟 div가 없으면 스크립트 바로 위에 생성
-        targetZone = document.createElement('div');
-        targetZone.id = 'adwiser_zone_multi_' + bannerId;
-        currentScript.parentNode.insertBefore(targetZone, currentScript);
-    }
+    if (!targetZone) return; // 자리를 못 찾으면 에러 방지를 위해 종료
 
     var slidesHtml = images.map(function(img) {
         return `
@@ -81,15 +72,15 @@
         </div>
     `;
 
-    // 4. 2초 대기 후 우 -> 좌 슬라이딩 타이머 로직
+    // 롤링 작동 타이머 (2초 대기 후 슬라이드)
     var track = targetZone.querySelector('.adw-m-track-' + bannerId);
     var currentIndex = 0;
 
     setInterval(function() {
-        // 다음 이미지 인덱스 계산 (마지막 이미지 다음엔 다시 0번으로)
         currentIndex = (currentIndex + 1) % images.length;
-        // 기차 트랙을 왼쪽으로 밀어버림
         var movePercent = currentIndex * (100 / images.length);
-        track.style.transform = 'translateX(-' + movePercent + '%)';
-    }, 2600); // 2초 정지 + 0.6초 슬라이딩 시간
+        if (track) {
+            track.style.transform = 'translateX(-' + movePercent + '%)';
+        }
+    }, 2600);
 })();
